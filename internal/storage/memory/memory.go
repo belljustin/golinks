@@ -1,25 +1,30 @@
 package memory
 
 import (
+	"log"
 	"net/url"
 	"sync"
 
-	"github.com/belljustin/golinks"
+	"github.com/belljustin/golinks/pkg/golinks"
 )
+
+func init() {
+	golinks.RegisterStorage("memory", newStorage)
+}
 
 type Storage struct {
 	lock sync.RWMutex
-	m    map[string]golinks.Link
+	m    map[string]url.URL
 }
 
-func NewStorage() *Storage {
+func newStorage() golinks.Storage {
 	return &Storage{
 		lock: sync.RWMutex{},
-		m:    make(map[string]golinks.Link),
+		m:    make(map[string]url.URL),
 	}
 }
 
-func (s *Storage) GetLink(name string) (*golinks.Link, error) {
+func (s *Storage) GetLink(name string) (*url.URL, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	link, ok := s.m[name]
@@ -33,10 +38,12 @@ func (s *Storage) GetLink(name string) (*golinks.Link, error) {
 func (s *Storage) SetLink(name string, l url.URL) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.m[name] = golinks.Link{
-		Name: name,
-		URL:  l,
-	}
+	s.m[name] = l
 
+	return nil
+}
+
+func (s *Storage) Migrate() error {
+	log.Println("[INFO] memory: nothing to migrate")
 	return nil
 }

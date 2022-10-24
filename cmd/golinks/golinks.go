@@ -1,16 +1,36 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
-	"github.com/belljustin/golinks"
-	"github.com/belljustin/golinks/internal/storage/memory"
+	"github.com/belljustin/golinks/internal/golinks"
+	_ "github.com/belljustin/golinks/internal/storage/dynamodb"
+	_ "github.com/belljustin/golinks/internal/storage/memory"
 )
 
 func main() {
-	log.Println("Starting golinks server...")
+	if len(os.Args) == 1 {
+		serve()
+	}
 
-	storage := memory.NewStorage()
-	server := golinks.NewServer(storage, "./web")
+	switch os.Args[1] {
+	case "migrate":
+		migrate()
+	default:
+		panic(fmt.Sprintf("Unrecognized command %s", os.Args[1]))
+	}
+}
+
+func migrate() {
+	storage := golinks.NewStorage()
+	if err := storage.Migrate(); err != nil {
+		panic(err)
+	}
+}
+
+func serve() {
+	server := golinks.NewServer()
 	log.Fatal(server.Serve())
 }

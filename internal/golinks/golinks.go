@@ -9,28 +9,38 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/belljustin/golinks/pkg/golinks"
 )
 
 type Server struct {
-	storage Storage
+	storage golinks.Storage
 	webPath string
 }
 
-func NewServer(storage Storage, webPath string) *Server {
+func NewServer() *Server {
+	storage := golinks.NewStorage(C.Storage.Type)
+
 	return &Server{
 		storage: storage,
-		webPath: webPath,
+		webPath: C.WebPath,
 	}
 }
 
+func NewStorage() golinks.Storage {
+	return golinks.NewStorage(C.Storage.Type)
+}
+
 func (s *Server) Serve() error {
+	log.Printf("[INFO] starting golinks server on port :%s", C.Port)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", s.ping)
 	mux.HandleFunc("/links", s.links)
 	mux.HandleFunc("/", s.home)
 
 	server := &http.Server{
-		Addr:           ":8080",
+		Addr:           fmt.Sprintf(":%s", C.Port),
 		Handler:        mux,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
@@ -139,6 +149,6 @@ func (s *Server) getLink(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Printf("[INFO] redirect link name '%s' to '%s'", name, link.URL.String())
-	http.Redirect(w, req, link.URL.String(), http.StatusTemporaryRedirect)
+	log.Printf("[INFO] redirect link name '%s' to '%s'", name, link.String())
+	http.Redirect(w, req, link.String(), http.StatusTemporaryRedirect)
 }

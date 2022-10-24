@@ -1,11 +1,9 @@
 BIN_DIR := "./bin"
-
-run: build
-	$(BIN_DIR)/golinks
+BUILD_DIR := "./build"
 
 .PHONY: build
 build:
 	go build -o $(BIN_DIR)/golinks cmd/golinks/golinks.go
 
-clean:
-	rm -rf $(BIN_DIR)
+docker-build:
+	docker build -t golinks:latest -t golinks:stable -f $(BUILD_DIR)/docker/Dockerfile .
