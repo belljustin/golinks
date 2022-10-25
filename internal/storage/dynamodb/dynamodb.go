@@ -55,10 +55,12 @@ func (s Storage) GetLink(name string) (*url.URL, error) {
 
 	result, err := s.svc.GetItem(input)
 	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == aws_dynamodb.ErrCodeResourceNotFoundException {
-			return nil, nil
-		}
 		return nil, err
+	}
+
+	if len(result.Item) == 0 {
+		// the link does not exist
+		return nil, nil
 	}
 
 	link := Link{}

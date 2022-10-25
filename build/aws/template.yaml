@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  golinks-app
+
+  Redirects memorable names to long URLs.
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Links
+      AttributeDefinitions:
+        - AttributeName: Name
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Name
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 10
+        WriteCapacityUnits: 10
+
+  GolinksFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      Runtime: go1.x
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DynamoDBTable
+      CodeUri: ./cmd/golinks-aws-lambda/
+      Handler: api
+      Timeout: 10
+      Environment:
+        Variables:
+          GOLINKS_STORAGE_TYPE: "dynamodb"
+      Events:
+        HomeHandler:
+          Type: Api
+          Properties:
+            Path: '/'
+            Method: get
+        LinksHandler:
+          Type: Api
+          Properties:
+            Path: '/links'
+            Method: post
+        RootHandler:
+          Type: Api
+          Properties:
+            Path: '/{proxy+}'
+            Method: get
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  GolinksApi:
+    Description: "API Gateway endpoint URL for Prod stage for golinks function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  HelloWorldFunction:
+    Description: "Golinks Lambda Function ARN"
+    Value: !GetAtt GolinksFunction.Arn
+  GolinksFunctionIamRole:
+    Description: "Implicit IAM Role created for Golinks function"
+    Value: !GetAtt GolinksFunctionRole.Arn

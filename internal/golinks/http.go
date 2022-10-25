@@ -4,19 +4,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
 	"github.com/belljustin/golinks/pkg/golinks"
 )
 
-type Server struct {
+type HttpServer struct {
 	service Service
 }
 
-func NewServer() *Server {
-	return &Server{
+func NewHttpServer() *HttpServer {
+	return &HttpServer{
 		service: defaultService(),
 	}
 }
@@ -25,7 +24,7 @@ func NewStorage() golinks.Storage {
 	return golinks.NewStorage(C.Storage.Type)
 }
 
-func (s *Server) Serve() error {
+func (s *HttpServer) Serve() error {
 	log.Printf("[INFO] starting golinks server on port :%s", C.Port)
 
 	mux := http.NewServeMux()
@@ -44,7 +43,7 @@ func (s *Server) Serve() error {
 	return server.ListenAndServe()
 }
 
-func (s *Server) ping(w http.ResponseWriter, req *http.Request) {
+func (s *HttpServer) ping(w http.ResponseWriter, req *http.Request) {
 	if err := s.service.Ping(); err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
@@ -54,7 +53,7 @@ func (s *Server) ping(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (s *Server) home(w http.ResponseWriter, req *http.Request) {
+func (s *HttpServer) home(w http.ResponseWriter, req *http.Request) {
 	if req.URL.Path == "/" {
 		content, err := s.service.Home()
 		if err != nil {
@@ -81,7 +80,7 @@ func (s *Server) home(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, redirect.String(), http.StatusTemporaryRedirect)
 }
 
-func (s *Server) links(w http.ResponseWriter, req *http.Request) {
+func (s *HttpServer) links(w http.ResponseWriter, req *http.Request) {
 	if req.Method == http.MethodPost {
 		s.postLink(w, req)
 	} else {
@@ -90,7 +89,7 @@ func (s *Server) links(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (s *Server) postLink(w http.ResponseWriter, req *http.Request) {
+func (s *HttpServer) postLink(w http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
 		log.Printf("[INFO] failed to create link: %s", err)
@@ -99,27 +98,12 @@ func (s *Server) postLink(w http.ResponseWriter, req *http.Request) {
 	}
 
 	values := req.Form
-	name := values.Get("linkName")
-	if name == "" {
-		log.Println("[INFO] missing param 'linkName'")
-		http.Error(w, "Bad Request: missing param 'linkName'", http.StatusBadRequest)
-		return
-	}
-
-	sURL := values.Get("linkURL")
-	if sURL == "" {
-		log.Println("[INFO] missing param 'linkURL'")
-		http.Error(w, "Bad Request: missing param 'linkURL'", http.StatusBadRequest)
-		return
-	}
-	URL, err := url.Parse(sURL)
+	link, err := parseLinkValues(values)
 	if err != nil {
-		log.Printf("[INFO] param 'linkURL' does not contain a valid url: %s", err)
-		http.Error(w, "Bad Request: param 'linkURL' does not contain a valid url", http.StatusBadRequest)
-		return
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	content, err := s.service.SetLink(name, *URL)
+	content, err := s.service.SetLink(link.Name, link.URL)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return

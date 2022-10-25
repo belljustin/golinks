@@ -10,7 +10,7 @@ A service that converts long URLs into memorable names.
 go install github.com/belljustin/golinks
 ```
 
-### Run
+## Run
 
 The following runs golinks with an in-memory datastore.
 See Configuration for more options.
@@ -24,6 +24,10 @@ golinks
 Some storage backends require running a migration.
 
 `golinks migrate`
+
+## Deploy
+
+- [AWS SAM](./build/aws) - deploy golinks as an AWS serverless application.
 
 ## Configuration
 

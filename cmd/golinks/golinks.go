@@ -31,6 +31,6 @@ func migrate() {
 }
 
 func serve() {
-	server := golinks.NewServer()
+	server := golinks.NewHttpServer()
 	log.Fatal(server.Serve())
 }
