@@ -21,7 +21,8 @@ func init() {
 }
 
 type Storage struct {
-	svc *aws_dynamodb.DynamoDB
+	tableName string
+	svc       *aws_dynamodb.DynamoDB
 }
 
 func newStorage() golinks.Storage {
@@ -34,7 +35,7 @@ func newStorage() golinks.Storage {
 	sess := session.Must(session.NewSession(config))
 	svc := aws_dynamodb.New(sess)
 
-	return &Storage{svc}
+	return &Storage{C.Storage.TableName, svc}
 }
 
 func (s Storage) GetLink(name string) (*url.URL, error) {

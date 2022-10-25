@@ -9,8 +9,9 @@ type config struct {
 }
 
 type storageConfig struct {
-	Region   string
-	Endpoint string
+	Region    string
+	Endpoint  string
+	TableName string
 }
 
 var C config
@@ -20,6 +21,8 @@ func loadConfig() {
 	viper.BindEnv("Storage.Region")
 	viper.SetDefault("Storage.Endpoint", "http://localhost:8000")
 	viper.BindEnv("Storage.Endpoint")
+	viper.SetDefault("Storage.TableName", "Links")
+	viper.BindEnv("Storage.TableName")
 
 	err := viper.Unmarshal(&C)
 	if err != nil {

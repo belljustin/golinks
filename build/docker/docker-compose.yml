@@ -4,8 +4,30 @@ services:
     build:
       context: ../../
       dockerfile: build/docker/Dockerfile
+    environment:
+      - GOLINKS_STORAGE_TYPE=dynamodb
     ports:
       - "8080:8080"
+    depends_on:
+      golinks-migrate:
+        condition: service_started
+
+  golinks-migrate:
+    build:
+      context: ../../
+      dockerfile: build/docker/Dockerfile
+    environment:
+      - GOLINKS_STORAGE_TYPE=dynamodb
+      - GOLINKS_STORAGE_ENDPOINT=http://dynamodb:8000
+      - AWS_ACCESS_KEY_ID=DUMMY_ACCESS_KEY_ID  # This value does not matter for dynamodb-local
+      - AWS_SECRET_ACCESS_KEY=DUMMY_SECRET_ACCESS_KEY # This value does not matter for dynamodb-local
+    entrypoint:
+      - /golinks
+      - migrate
+    depends_on:
+      dynamodb:
+        condition: service_started
+
   dynamodb:
     image: "amazon/dynamodb-local:1.20.0"
     ports:
