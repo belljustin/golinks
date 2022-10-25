@@ -1,0 +1,1 @@
+GOLINKS_STORAGE_TYPE=dynamodb golinks migrate

@@ -1,0 +1,10 @@
+[Unit]
+Description=Golinks
+
+[Service]
+Environment=GOLINKS_STORAGE_TYPE=dynamodb
+Environment=AWS_SHARED_CREDENTIALS_FILE=/etc/golinks/.aws/credentials
+ExecStart=/usr/sbin/golinks
+
+[Install]
+WantedBy=multi-user.target

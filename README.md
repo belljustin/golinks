@@ -4,18 +4,20 @@ A service that converts long URLs into memorable names.
 
 ![Screenshot of golinks](./assets/screenshot.png)
 
-## Usage
-
-### Local
-
-This runs the application with a dynamodb-local in via docker.
+## Install
 
 ```sh
-docker-compose -f build/docker/docker-compose.yml up
+go install github.com/belljustin/golinks
 ```
 
-Then you can visit `localhost:8080` to create a golink.
-Once created, you can follow that link with `localhost:8080/<name>`.
+### Run
+
+The following runs golinks with an in-memory datastore.
+See Configuration for more options.
+
+```sh
+golinks
+```
 
 ### Migration
 
@@ -27,10 +29,6 @@ Some storage backends require running a migration.
 
 Configuration is managed by environment variables.
 
-- GOLINKS_WEBPATH
-  - Specifies where the static web path assets are stored.
-  - default: `./web`
-  - e.g. `/var/web`, `./web`
 - GOLINKS_PORT
   - Specifies which port the application listens on.
   - default: `8080`

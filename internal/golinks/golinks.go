@@ -1,21 +1,40 @@
 package golinks
 
 import (
+	"embed"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"time"
 
 	"github.com/belljustin/golinks/pkg/golinks"
 )
 
+const (
+	indexFName         = "web/html/index.html"
+	linkAddedTmplFName = "web/html/tmpl/link-added.html"
+)
+
+//go:embed web
+var resources embed.FS
+
+func init() {
+	// verify the static files have been properly embedded
+	if _, err := resources.ReadFile(indexFName); err != nil {
+		panic(err)
+	}
+	if _, err := resources.ReadFile(linkAddedTmplFName); err != nil {
+		panic(err)
+	}
+}
+
 type Server struct {
-	storage golinks.Storage
-	webPath string
+	storage   golinks.Storage
+	resources fs.FS
 }
 
 func NewServer() *Server {
@@ -23,7 +42,6 @@ func NewServer() *Server {
 
 	return &Server{
 		storage: storage,
-		webPath: C.WebPath,
 	}
 }
 
@@ -58,8 +76,17 @@ func (s *Server) ping(w http.ResponseWriter, req *http.Request) {
 
 func (s *Server) home(w http.ResponseWriter, req *http.Request) {
 	if req.URL.Path == "/" {
-		fName := path.Join(s.webPath, "html/index.html")
-		http.ServeFile(w, req, fName)
+		content, err := resources.ReadFile(indexFName)
+		if err != nil {
+			log.Printf("[ERROR] failed to read '%s': %s", indexFName, err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		_, err = w.Write(content)
+		if err != nil {
+			log.Printf("[WARN] failed to write home: %s", err)
+		}
 		return
 	}
 
@@ -112,10 +139,9 @@ func (s *Server) postLink(w http.ResponseWriter, req *http.Request) {
 
 	log.Println("[INFO] link added")
 
-	p := path.Join(s.webPath, "html/tmpl/link-added.html")
-	t, err := template.ParseFiles(p)
+	t, err := template.ParseFS(resources, linkAddedTmplFName)
 	if err != nil {
-		log.Printf("[ERROR] failed to parse link-added.html: %s", err)
+		log.Printf("[ERROR] failed to parse %s: %s", linkAddedTmplFName, err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

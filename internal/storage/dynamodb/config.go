@@ -19,8 +19,9 @@ var C config
 func loadConfig() {
 	viper.SetDefault("Storage.Region", "us-west-2")
 	viper.BindEnv("Storage.Region")
-	viper.SetDefault("Storage.Endpoint", "http://localhost:8000")
+
 	viper.BindEnv("Storage.Endpoint")
+
 	viper.SetDefault("Storage.TableName", "Links")
 	viper.BindEnv("Storage.TableName")
 

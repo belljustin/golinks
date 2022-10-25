@@ -7,8 +7,7 @@ import (
 )
 
 type config struct {
-	WebPath string
-	Port    string
+	Port string
 
 	Storage storageConfig
 }
@@ -23,8 +22,6 @@ func init() {
 	viper.SetEnvPrefix("golinks")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(`.`, `_`))
 
-	viper.SetDefault("WebPath", "./web")
-	viper.BindEnv("WebPath")
 	viper.SetDefault("Port", 8080)
 	viper.BindEnv("Port")
 	viper.SetDefault("Storage.Type", "memory")
