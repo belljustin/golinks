@@ -1,10 +1,7 @@
 package golinks
 
 import (
-	"embed"
 	"fmt"
-	"html/template"
-	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
@@ -14,34 +11,13 @@ import (
 	"github.com/belljustin/golinks/pkg/golinks"
 )
 
-const (
-	indexFName         = "web/html/index.html"
-	linkAddedTmplFName = "web/html/tmpl/link-added.html"
-)
-
-//go:embed web
-var resources embed.FS
-
-func init() {
-	// verify the static files have been properly embedded
-	if _, err := resources.ReadFile(indexFName); err != nil {
-		panic(err)
-	}
-	if _, err := resources.ReadFile(linkAddedTmplFName); err != nil {
-		panic(err)
-	}
-}
-
 type Server struct {
-	storage   golinks.Storage
-	resources fs.FS
+	service Service
 }
 
 func NewServer() *Server {
-	storage := golinks.NewStorage(C.Storage.Type)
-
 	return &Server{
-		storage: storage,
+		service: defaultService(),
 	}
 }
 
@@ -69,28 +45,40 @@ func (s *Server) Serve() error {
 }
 
 func (s *Server) ping(w http.ResponseWriter, req *http.Request) {
-	if _, err := fmt.Fprintf(w, "pong"); err != nil {
-		log.Printf("[ERROR] %s", err)
+	if err := s.service.Ping(); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
+
+	if _, err := fmt.Fprint(w, "pong"); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 }
 
 func (s *Server) home(w http.ResponseWriter, req *http.Request) {
 	if req.URL.Path == "/" {
-		content, err := resources.ReadFile(indexFName)
+		content, err := s.service.Home()
 		if err != nil {
-			log.Printf("[ERROR] failed to read '%s': %s", indexFName, err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
-		_, err = w.Write(content)
-		if err != nil {
-			log.Printf("[WARN] failed to write home: %s", err)
+		if _, err := w.Write(content); err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 		return
 	}
 
-	s.getLink(w, req)
+	name := strings.TrimLeft(req.URL.Path, "/")
+	redirect, err := s.service.GetLink(name)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	} else if redirect == nil {
+		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+		return
+	}
+
+	http.Redirect(w, req, redirect.String(), http.StatusTemporaryRedirect)
 }
 
 func (s *Server) links(w http.ResponseWriter, req *http.Request) {
@@ -131,50 +119,15 @@ func (s *Server) postLink(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := s.storage.SetLink(name, *URL); err != nil {
-		log.Printf("[ERROR] failed to set link: %s", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	log.Println("[INFO] link added")
-
-	t, err := template.ParseFS(resources, linkAddedTmplFName)
+	content, err := s.service.SetLink(name, *URL)
 	if err != nil {
-		log.Printf("[ERROR] failed to parse %s: %s", linkAddedTmplFName, err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	err = t.Execute(w, struct {
-		Name string
-		URL  string
-	}{
-		Name: name,
-		URL:  sURL,
-	})
-	if err != nil {
-		log.Printf("[ERROR] failed to execute link-added.html template: %s", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *Server) getLink(w http.ResponseWriter, req *http.Request) {
-	name := strings.TrimLeft(req.URL.Path, "/")
-
-	link, err := s.storage.GetLink(name)
-	if err != nil {
-		log.Printf("[ERROR] %s", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	if link == nil {
-		log.Printf("[INFO] link name '%s' does not exist", name)
-		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+	if _, err := w.Write(content); err != nil {
+		log.Printf("[ERROR] failed to write: %s", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-
-	log.Printf("[INFO] redirect link name '%s' to '%s'", name, link.String())
-	http.Redirect(w, req, link.String(), http.StatusTemporaryRedirect)
 }
