@@ -10,6 +10,7 @@ make deploy
 
 This will create Lambda Functions to:
 - serve the homepage,
+- answer healthcheck,
 - create new Links, and
 - redirect names to existing Links
 

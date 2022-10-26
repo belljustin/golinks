@@ -43,6 +43,10 @@ func (s *Storage) SetLink(name string, l url.URL) error {
 	return nil
 }
 
+func (s *Storage) Health() error {
+	return nil
+}
+
 func (s *Storage) Migrate() error {
 	log.Println("[INFO] memory: nothing to migrate")
 	return nil

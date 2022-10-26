@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>golinks</title>
+    <title>golinks - health</title>
     <link rel="icon" href="data:,">
 </head>
 <body>
-  Successfully added golink for '{{.Name}}' to <a href="{{.URL}}">{{.URL}}</a>
+<ul>
+{{ range . }}
+  <li><strong>{{ .Component }}</strong>: {{ .Error }}</li>
+{{ end }}
+</ul>
 </body>
 </html>

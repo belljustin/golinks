@@ -1,6 +1,8 @@
 package dynamodb
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net/url"
 
@@ -90,6 +92,26 @@ func (s Storage) SetLink(name string, url url.URL) error {
 
 	_, err = s.svc.PutItem(input)
 	return err
+}
+
+func (s Storage) Health() error {
+	input := &aws_dynamodb.DescribeTableInput{
+		TableName: aws.String(s.tableName),
+	}
+
+	_, err := s.svc.DescribeTable(input)
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() == aws_dynamodb.ErrCodeResourceNotFoundException {
+				log.Printf("[ERROR] the table '%s' does not exist: %s", s.tableName, err)
+				return fmt.Errorf("table '%s' does not exist", s.tableName)
+			}
+		}
+		log.Printf("[ERROR] failed to describe table '%s': %s", s.tableName, err)
+		return errors.New("error")
+	}
+
+	return nil
 }
 
 func (s Storage) Migrate() error {

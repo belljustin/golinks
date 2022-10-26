@@ -12,6 +12,7 @@ import (
 
 const (
 	indexFName         = "web/html/index.html"
+	healthTmplFname    = "web/html/tmpl/health.html"
 	linkAddedTmplFName = "web/html/tmpl/link-added.html"
 )
 
@@ -28,8 +29,40 @@ func init() {
 	}
 }
 
+type HealthCheck struct {
+	Component string
+	Error     error
+}
+
+type HealthChecks []HealthCheck
+
+func (hs HealthChecks) HTML() ([]byte, error) {
+	t, err := template.ParseFS(resources, healthTmplFname)
+	if err != nil {
+		log.Printf("[ERROR] failed to parse %s: %s", healthTmplFname, err)
+		return nil, err
+	}
+
+	buffer := &bytes.Buffer{}
+	err = t.Execute(buffer, hs)
+	if err != nil {
+		log.Printf("[ERROR] failed to execute %s template: %s", healthTmplFname, err)
+		return nil, err
+	}
+	return buffer.Bytes(), nil
+}
+
+func (hs HealthChecks) Error() bool {
+	for _, h := range hs {
+		if h.Error != nil {
+			return true
+		}
+	}
+	return false
+}
+
 type Service interface {
-	Ping() error
+	Health() HealthChecks
 	Home() ([]byte, error)
 	GetLink(name string) (*url.URL, error)
 	SetLink(name string, link url.URL) ([]byte, error)
@@ -47,8 +80,11 @@ func defaultService() Service {
 	}
 }
 
-func (svc *serviceImpl) Ping() error {
-	return nil
+func (svc *serviceImpl) Health() HealthChecks {
+	return HealthChecks{
+		{"server", nil},
+		{"storage", svc.storage.Health()},
+	}
 }
 
 func (svc *serviceImpl) Home() ([]byte, error) {

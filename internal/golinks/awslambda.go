@@ -23,8 +23,8 @@ func (h LambdaHandler) Handle(req events.APIGatewayProxyRequest) (*events.APIGat
 	switch req.Path {
 	case "/":
 		return h.home()
-	case "/ping":
-		return h.ping()
+	case "/health":
+		return h.health()
 	case "/links":
 		return h.createLink(req)
 	default:
@@ -32,11 +32,17 @@ func (h LambdaHandler) Handle(req events.APIGatewayProxyRequest) (*events.APIGat
 	}
 }
 
-func (h LambdaHandler) ping() (*events.APIGatewayProxyResponse, error) {
-	if err := h.service.Ping(); err != nil {
+func (h LambdaHandler) health() (*events.APIGatewayProxyResponse, error) {
+	healthchecks := h.service.Health()
+	content, err := healthchecks.HTML()
+	if err != nil {
 		return h.apiError(http.StatusInternalServerError)
 	}
-	return h.apiResponse(http.StatusOK, []byte("pong"))
+
+	if healthchecks.Error() {
+		return h.apiResponse(http.StatusInternalServerError, content)
+	}
+	return h.apiResponse(http.StatusOK, content)
 }
 
 func (h LambdaHandler) home() (*events.APIGatewayProxyResponse, error) {

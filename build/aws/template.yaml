@@ -54,6 +54,11 @@ Resources:
           Properties:
             Path: '/{proxy+}'
             Method: get
+        HealthHandler:
+          Type: Api
+          Properties:
+            Path: '/health'
+            Method: get
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

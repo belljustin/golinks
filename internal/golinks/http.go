@@ -28,7 +28,7 @@ func (s *HttpServer) Serve() error {
 	log.Printf("[INFO] starting golinks server on port :%s", C.Port)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/ping", s.ping)
+	mux.HandleFunc("/health", s.health)
 	mux.HandleFunc("/links", s.links)
 	mux.HandleFunc("/", s.home)
 
@@ -43,12 +43,20 @@ func (s *HttpServer) Serve() error {
 	return server.ListenAndServe()
 }
 
-func (s *HttpServer) ping(w http.ResponseWriter, req *http.Request) {
-	if err := s.service.Ping(); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+func (s *HttpServer) health(w http.ResponseWriter, req *http.Request) {
+	healthChecks := s.service.Health()
+	if healthChecks.Error() {
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-	if _, err := fmt.Fprint(w, "pong"); err != nil {
+	content, err := healthChecks.HTML()
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := w.Write(content); err != nil {
+		log.Printf("[ERROR] failed to write health content: %s", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 }

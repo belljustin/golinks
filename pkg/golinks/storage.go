@@ -31,6 +31,7 @@ type Storage interface {
 	GetLink(name string) (*url.URL, error)
 	SetLink(name string, url url.URL) error
 
+	Health() error
 	Migrate() error
 }
 
