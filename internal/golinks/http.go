@@ -11,12 +11,14 @@ import (
 )
 
 type HttpServer struct {
-	service Service
+	service golinks.Service
+	m       *htmlMarshaller
 }
 
 func NewHttpServer() *HttpServer {
 	return &HttpServer{
 		service: defaultService(),
+		m:       &htmlMarshaller{},
 	}
 }
 
@@ -49,7 +51,7 @@ func (s *HttpServer) health(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-	content, err := healthChecks.HTML()
+	content, err := s.m.healthChecks(healthChecks)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -63,7 +65,7 @@ func (s *HttpServer) health(w http.ResponseWriter, req *http.Request) {
 
 func (s *HttpServer) home(w http.ResponseWriter, req *http.Request) {
 	if req.URL.Path == "/" {
-		content, err := s.service.Home()
+		content, err := s.m.home()
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
@@ -111,7 +113,12 @@ func (s *HttpServer) postLink(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	content, err := s.service.SetLink(link.Name, link.URL)
+	if err := s.service.SetLink(link.Name, link.URL); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	content, err := s.m.setLink(link.Name, link.URL)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return

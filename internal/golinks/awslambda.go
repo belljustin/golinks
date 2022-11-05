@@ -7,15 +7,19 @@ import (
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
+
+	"github.com/belljustin/golinks/pkg/golinks"
 )
 
 type LambdaHandler struct {
-	service Service
+	service golinks.Service
+	m       *htmlMarshaller
 }
 
 func NewLambdaHandler() LambdaHandler {
 	return LambdaHandler{
 		service: defaultService(),
+		m:       &htmlMarshaller{},
 	}
 }
 
@@ -34,7 +38,7 @@ func (h LambdaHandler) Handle(req events.APIGatewayProxyRequest) (*events.APIGat
 
 func (h LambdaHandler) health() (*events.APIGatewayProxyResponse, error) {
 	healthchecks := h.service.Health()
-	content, err := healthchecks.HTML()
+	content, err := h.m.healthChecks(healthchecks)
 	if err != nil {
 		return h.apiError(http.StatusInternalServerError)
 	}
@@ -46,7 +50,7 @@ func (h LambdaHandler) health() (*events.APIGatewayProxyResponse, error) {
 }
 
 func (h LambdaHandler) home() (*events.APIGatewayProxyResponse, error) {
-	content, err := h.service.Home()
+	content, err := h.m.home()
 	if err != nil {
 		return h.apiError(http.StatusInternalServerError)
 	}
@@ -65,10 +69,15 @@ func (h LambdaHandler) createLink(req events.APIGatewayProxyRequest) (*events.AP
 		return h.apiError(http.StatusBadRequest)
 	}
 
-	content, err := h.service.SetLink(link.Name, link.URL)
+	if err := h.service.SetLink(link.Name, link.URL); err != nil {
+		return h.apiError(http.StatusInternalServerError)
+	}
+
+	content, err := h.m.setLink(link.Name, link.URL)
 	if err != nil {
 		return h.apiError(http.StatusInternalServerError)
 	}
+
 	return h.apiResponse(http.StatusCreated, content)
 }
 
